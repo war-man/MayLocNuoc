@@ -1,0 +1,444 @@
+﻿@using MayLocNuoc.Models;
+@{
+    ViewBag.Title = "Product_In_Day_inMonth";
+    Layout = "~/Views/NhaCungCap/Lay_out_DoanhThu.cshtml";
+}
+    <div style="width:100%;">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link " href="@Url.Action("xemDoanhthu","NhaCungCap")">Doang Thu Tổng Quan</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link  active" href="@Url.Action("Product_In_Day_inMonth","NhaCungCap")">Theo Tháng</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link " href="@Url.Action("Evaluate_Product","NhaCungCap")">Đánh Giá</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link " href="@Url.Action("Product_To","NhaCungCap")">Sản Phẩm Yêu Cầu </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link " href="@Url.Action("List_Product","NhaCungCap")">Danh sách</a>
+            </li>
+        </ul>
+    </div>
+@model  f_DoanhThuTrongThang_Result
+@{
+    mayLocNuocEntities db = new mayLocNuocEntities();
+    int ngay = ViewBag.ngay;
+    int thang = ViewBag.thang;
+    int nam = ViewBag.nam;
+    int tongdoanhthu = 0;
+    int cacthangdaco = 0;
+    int[] dabansanphammap = new int[13];
+    int[] conlaisanphammap = new int[13];
+    double[] doanhthumap = new double[13];
+}
+<div class="col-lg-12 col-xs-12 col-md-12 col-sm-12" style="padding:20px;">
+    <div style="width: 100%; height:1000px;">
+        <h1 style="text-align:center">DOANH THU THEO NĂM ( @nam )</h1>
+        <div id="curve_chart" style="width: 100%; height: 100%;"></div>
+    </div>
+</div>
+<hr />
+<div style="width:100%; padding-top:5%">
+    <h1 style="text-align:center">CHI TIẾT</h1>
+    <div>
+        <input type="submit" class="btn btn-success" value="In ra excel" style="margin:2%; width:10%;" />
+        <input type="submit" class="btn btn-success" value="In ra Work" style="margin:2%; width:10%;" />
+        <select id="BTNChonThangNam" style="margin:2%; width:10%;" class="btn btn-success">
+            <option>Năm</option>
+            <option>2020</option>
+            <option>2021</option>
+            <option>2022</option>
+            <option>2023</option>
+            <option>2024</option>
+            <option>2025</option>
+            <option>2026</option>
+            <option>2027</option>
+            <option>2028</option>
+            <option>2029</option>
+        </select>
+        <select id="BTNChonThangThang" style="margin:2%; width:10%;" class="btn btn-success">
+            <option>Tháng</option>
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option>5</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+            <option>10</option>
+            <option>11</option>
+            <option>12</option>
+        </select>
+        <input id="BTNthang" type="submit" class="btn btn-success" value="Tìm" style="margin:2%; width:10%;" />
+        
+    </div>
+    <table border="1" cellpadding="5" cellspacing="5" width="100%">
+        <tr style="text-align:center;">
+            <td>Tháng</td>
+            <td>Tổng Giá (VNĐ)(Chưa có Giảm Giá)</td>
+            <td>Tổng Số Lượng Còn Lại </td>
+            <td>Tổng Số Lượng Đã Mua</td>
+            <td>Tăng Trưởng</td>
+            <td>Chi Tiết Tháng</td>
+        </tr>
+        @for (int i = 1; i < 13; i++)
+        {
+            var doanhthuThang = db.f_DoanhThuTrongThang(save.taikhoan, i, nam).FirstOrDefault();
+            
+            if (doanhthuThang == null)
+            {
+            }
+            else
+            {
+                cacthangdaco++;
+                dabansanphammap[i] = Convert.ToInt32(doanhthuThang.Tongslcl);
+                conlaisanphammap[i] = Convert.ToInt32(doanhthuThang.Tongsldm);
+
+                <tr style="text-align:center;">
+                    <td>@i</td>
+                    <td>@doanhthuThang.Tonggia</td>
+                    <td>@doanhthuThang.Tongslcl</td>
+                    <td>@doanhthuThang.Tongsldm</td>
+                    <td>
+                        @{ tongdoanhthu = tongdoanhthu + Convert.ToInt32(doanhthuThang.Tongsldm);
+                            float giatri1 = (float)Convert.ToInt32(doanhthuThang.Tongsldm);
+                            double TangTruong = Math.Round((giatri1 / tongdoanhthu) * 100, 3);
+                            doanhthumap[i] = TangTruong;
+                        }
+                        @TangTruong (%)
+                    </td>
+
+                    <td><a href="@Url.Action("Product_In_Day_inMonth","NhaCungCap", new {nam=nam,thang=i})"> Xem</a></td>
+                </tr>
+            }
+        }
+    </table>
+</div>
+<hr />
+<script>
+    //bieu do thu 2 san pham dua vao thang nay  san pham
+    google.charts.load('current', { 'packages': ['corechart'] });
+    google.charts.setOnLoadCallback(drawChart);
+
+    function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+            ['Tháng', 'Tổng Sản Phẩm Đưa Vào ', 'Đã Bán(Trong Tháng)', 'Tỉ Lệ Tăng Trưởng (100%) '],
+            ['1', @dabansanphammap[1] , @conlaisanphammap[1], @doanhthumap[1] ],
+            ['2', @dabansanphammap[2] , @conlaisanphammap[2], @doanhthumap[2] ],
+            ['3', @dabansanphammap[3] , @conlaisanphammap[3], @doanhthumap[3] ],
+            ['4', @dabansanphammap[4] , @conlaisanphammap[4], @doanhthumap[4] ],
+            ['5', @dabansanphammap[5] , @conlaisanphammap[5], @doanhthumap[5] ],
+            ['6', @dabansanphammap[6] , @conlaisanphammap[6], @doanhthumap[6] ],
+            ['7', @dabansanphammap[7] , @conlaisanphammap[7], @doanhthumap[7] ],
+            ['8', @dabansanphammap[8] , @conlaisanphammap[8], @doanhthumap[8] ],
+            ['9', @dabansanphammap[9] , @conlaisanphammap[9], @doanhthumap[9] ],
+            ['10', @dabansanphammap[10] , @conlaisanphammap[10], @doanhthumap[10] ],
+            ['11', @dabansanphammap[11] , @conlaisanphammap[11], @doanhthumap[11] ],
+            ['12', @dabansanphammap[12] , @conlaisanphammap[12], @doanhthumap[12] ]
+        ]);
+
+        var options = {
+            title: 'Doanh Thu Năm @nam',
+            curveType: 'function',
+            legend: { position: 'bottom' }
+        };
+
+        var chart = new google.visualization.LineChart(document.getElementById('curve_chart'));
+
+        chart.draw(data, options);
+    }
+
+</script>
+@{
+    //capnhat theo ngay
+    int tongdoanhthuNgayNgayTrong = 0;
+    int cacthangdacoNgayNgayTrong = 0;
+    int[] dabansanphammapNgay = new int[32];
+    int[] conlaisanphammapNgay = new int[32];
+    double[] doanhthumapNgay = new double[32];
+    double[] tangtruowngNgay = new double[32];
+}
+<div style="margin:20px 0px;height:2px; width:100%; background-color:black;"></div>
+<div class="col-lg-12 col-xs-12 col-md-12 col-sm-12" style="padding:20px;">
+    <div style="width: 100%; height:1000px;">
+        <h1 style="text-align:center">DOANH THU THEO THÁNG (@thang /@nam)</h1>
+        <div id="curve_chart1" style="width: 100%; height: 100%;"></div>
+    </div>
+</div>
+<hr />
+<div style="width:100%; padding-top:5%">
+    <h1 style="text-align:center">THÔNG SỐ (@thang /@nam)</h1>
+    <div>
+        <input type="submit" class="btn btn-success" value="In ra excel" style="margin:2%; width:10%;" />
+        <input type="submit" class="btn btn-success" value="In ra Work" style="margin:2%; width:10%;" />
+        <select id="btnnamMap2"  style="margin:2%; width:10%;" class="btn btn-success">
+            <option>Năm</option>
+            <option>2020</option>
+            <option>2021</option>
+            <option>2022</option>
+            <option>2023</option>
+            <option>2024</option>
+            <option>2025</option>
+            <option>2026</option>
+            <option>2027</option>
+            <option>2028</option>
+            <option>2029</option>
+        </select>
+        <select id="btnthangMap2" style="margin:2%; width:10%;" class="btn btn-success">
+            <option>Tháng</option>
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option>5</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+            <option>10</option>
+            <option>11</option>
+            <option>12</option>
+        </select>
+        <select id="btnngayMap2" style="margin:2%; width:10%;" class="btn btn-success">
+            <option>Ngày</option>
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option>5</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+            <option>10</option>
+            <option>11</option>
+            <option>12</option>
+            <option>13</option>
+            <option>14</option>
+            <option>15</option>
+            <option>16</option>
+            <option>17</option>
+            <option>18</option>
+            <option>19</option>
+            <option>20</option>
+            <option>21</option>
+            <option>22</option>
+            <option>23</option>
+            <option>24</option>
+            <option>25</option>
+            <option>26</option>
+            <option>27</option>
+            <option>28</option>
+            <option>29</option>
+            <option>30</option>
+            <option>31</option>
+        </select>
+        <input type="submit" id="btnMap2" class="btn btn-success" value="Tìm" style="margin:2%; width:10%;" />
+    </div>
+    <table border="1" cellpadding="5" cellspacing="5" width="100%">
+        <tr style="text-align:center;">
+            <td>Ngày</td>
+            <td>Tổng Giá (VNĐ)(Chưa có Giảm Giá)</td>
+            <td>Tổng Số Lượng Còn Lại </td>
+            <td>Tổng Số Lượng Đã Mua</td>
+            <td>Doanh Thu</td>
+            <td>Tăng Trưởng</td>
+            <td>Chi Tiết Ngày</td>
+        </tr>
+        @for (int i = 1; i < 31; i++)
+        {
+            var doanhthuNgayTrongThang = db.f_DoanhThuNgayTrongThang(save.taikhoan, thang, nam, i).FirstOrDefault();
+            if (doanhthuNgayTrongThang == null)
+            {
+            }
+            else
+            {
+                cacthangdacoNgayNgayTrong++;
+                doanhthumapNgay[i] = Convert.ToInt32(doanhthuNgayTrongThang.Tonggia);
+                dabansanphammapNgay[i] = Convert.ToInt32(doanhthuNgayTrongThang.Tongslcl);
+                conlaisanphammapNgay[i] = Convert.ToInt32(doanhthuNgayTrongThang.Tongsldm);
+
+                <tr style="text-align:center;">
+                    <td>@i</td>
+                    <td>@doanhthuNgayTrongThang.Tonggia</td>
+                    <td>@doanhthuNgayTrongThang.Tongslcl</td>
+                    <td>@doanhthuNgayTrongThang.Tongsldm</td>
+                    <td>@doanhthuNgayTrongThang.ngaylapdat</td>
+                    <td>
+                        @{ tongdoanhthuNgayNgayTrong = tongdoanhthuNgayNgayTrong + Convert.ToInt32(doanhthuNgayTrongThang.Tongsldm);
+                            float giatriNgayTrong = (float)Convert.ToInt32(doanhthuNgayTrongThang.Tongsldm);
+                            double TangTruongNgayTrong = Math.Round((giatriNgayTrong / tongdoanhthuNgayNgayTrong) * 100, 3);
+                            tangtruowngNgay[i] = TangTruongNgayTrong;
+                        }
+                        @TangTruongNgayTrong (%)
+                    </td>
+
+                    <td><a href="@Url.Action("Product_In_Day_inMonth","NhaCungCap", new {nam=nam, thang=thang, ngay=i })">Xem</a></td>
+                </tr>
+            }
+        }
+    </table>
+</div>
+<hr />
+<script>
+        //bieu do thu 2 san pham dua vao thang nay  san pham
+        google.charts.load('current', { 'packages': ['corechart'] });
+        google.charts.setOnLoadCallback(drawChart);
+
+        function drawChart() {
+            var data = google.visualization.arrayToDataTable([
+                ['Ngày', 'Tổng Giá ', 'Số Lượng Còn Lại(Trong Tháng)', 'Số Lượng Đã Mua(Trong Tháng)', 'Tỉ Lệ Tăng Trưởng (100%) '],
+                ['1', @doanhthumapNgay[1], @dabansanphammapNgay[1], @conlaisanphammapNgay[1], @tangtruowngNgay[1] ],
+                ['2', @doanhthumapNgay[2], @dabansanphammapNgay[2], @conlaisanphammapNgay[2], @tangtruowngNgay[2] ],
+                ['3', @doanhthumapNgay[3], @dabansanphammapNgay[3], @conlaisanphammapNgay[3], @tangtruowngNgay[3] ],
+                ['4', @doanhthumapNgay[4], @dabansanphammapNgay[4], @conlaisanphammapNgay[4], @tangtruowngNgay[4] ],
+                ['5', @doanhthumapNgay[5], @dabansanphammapNgay[5], @conlaisanphammapNgay[5], @tangtruowngNgay[6] ],
+                ['6', @doanhthumapNgay[6], @dabansanphammapNgay[6], @conlaisanphammapNgay[6], @tangtruowngNgay[7] ],
+                ['7', @doanhthumapNgay[7], @dabansanphammapNgay[7], @conlaisanphammapNgay[7], @tangtruowngNgay[8] ],
+                ['8', @doanhthumapNgay[8], @dabansanphammapNgay[8], @conlaisanphammapNgay[8], @tangtruowngNgay[9] ],
+                ['9', @doanhthumapNgay[9], @dabansanphammapNgay[9], @conlaisanphammapNgay[9], @tangtruowngNgay[1] ],
+                ['10', @doanhthumapNgay[10], @dabansanphammapNgay[10], @conlaisanphammapNgay[10], @tangtruowngNgay[10] ],
+                ['11', @doanhthumapNgay[11], @dabansanphammapNgay[11], @conlaisanphammapNgay[11], @tangtruowngNgay[11] ],
+                ['12', @doanhthumapNgay[12], @dabansanphammapNgay[12], @conlaisanphammapNgay[12], @tangtruowngNgay[12] ],
+                ['13', @doanhthumapNgay[13], @dabansanphammapNgay[13], @conlaisanphammapNgay[13], @tangtruowngNgay[13] ],
+                ['14', @doanhthumapNgay[14], @dabansanphammapNgay[14], @conlaisanphammapNgay[14], @tangtruowngNgay[14] ],
+                ['15', @doanhthumapNgay[15], @dabansanphammapNgay[15], @conlaisanphammapNgay[15], @tangtruowngNgay[15] ],
+                ['16', @doanhthumapNgay[16], @dabansanphammapNgay[16], @conlaisanphammapNgay[16], @tangtruowngNgay[16] ],
+                ['17', @doanhthumapNgay[17], @dabansanphammapNgay[17], @conlaisanphammapNgay[17], @tangtruowngNgay[17] ],
+                ['18', @doanhthumapNgay[18], @dabansanphammapNgay[18], @conlaisanphammapNgay[18], @tangtruowngNgay[18] ],
+                ['19', @doanhthumapNgay[19], @dabansanphammapNgay[19], @conlaisanphammapNgay[19], @tangtruowngNgay[19] ],
+                ['20', @doanhthumapNgay[20], @dabansanphammapNgay[20], @conlaisanphammapNgay[20], @tangtruowngNgay[20] ],
+                ['21', @doanhthumapNgay[21], @dabansanphammapNgay[21], @conlaisanphammapNgay[21], @tangtruowngNgay[21] ],
+                ['22', @doanhthumapNgay[22], @dabansanphammapNgay[22], @conlaisanphammapNgay[22], @tangtruowngNgay[22] ],
+                ['23', @doanhthumapNgay[23], @dabansanphammapNgay[23], @conlaisanphammapNgay[23], @tangtruowngNgay[23] ],
+                ['24', @doanhthumapNgay[24], @dabansanphammapNgay[24], @conlaisanphammapNgay[24], @tangtruowngNgay[24] ],
+                ['25', @doanhthumapNgay[25], @dabansanphammapNgay[25], @conlaisanphammapNgay[25], @tangtruowngNgay[25] ],
+                ['26', @doanhthumapNgay[26], @dabansanphammapNgay[26], @conlaisanphammapNgay[26], @tangtruowngNgay[26] ],
+                ['27', @doanhthumapNgay[27], @dabansanphammapNgay[27], @conlaisanphammapNgay[27], @tangtruowngNgay[27] ],
+                ['28', @doanhthumapNgay[28], @dabansanphammapNgay[28], @conlaisanphammapNgay[28], @tangtruowngNgay[28] ],
+                ['29', @doanhthumapNgay[29], @dabansanphammapNgay[29], @conlaisanphammapNgay[29], @tangtruowngNgay[29] ],
+                ['30', @doanhthumapNgay[30], @dabansanphammapNgay[30], @conlaisanphammapNgay[30], @tangtruowngNgay[30] ],
+                ['31', @doanhthumapNgay[31], @dabansanphammapNgay[31], @conlaisanphammapNgay[31], @tangtruowngNgay[31] ],
+            ]);
+
+            var options = {
+                title: 'Doanh Thu Tháng @thang',
+                curveType: 'function',
+                legend: { position: 'bottom' }
+            };
+
+            var chart = new google.visualization.LineChart(document.getElementById('curve_chart1'));
+
+            chart.draw(data, options);
+        }
+
+</script>
+<div style="width:100%; padding-top:5%">
+    <h1 style="text-align:center">CHI TIẾT NGÀY (@ngay /@thang /@nam )</h1>
+    <div>
+        <input type="submit" class="btn btn-success" value="In ra excel" style="margin:2%; width:10%;" />
+        <input type="submit" class="btn btn-success" value="In ra Work" style="margin:2%; width:10%;" />
+        <select id="btnchitietnam" style="margin:2%; width:10%;" class="btn btn-success">
+            <option>Năm</option>
+            <option>2020</option>
+            <option>2021</option>
+            <option>2022</option>
+            <option>2023</option>
+            <option>2024</option>
+            <option>2025</option>
+            <option>2026</option>
+            <option>2027</option>
+            <option>2028</option>
+            <option>2029</option>
+        </select>
+        <select id="btnchitietThang" style="margin:2%; width:10%;" class="btn btn-success">
+            <option>Tháng</option>
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option>5</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+            <option>10</option>
+            <option>11</option>
+            <option>12</option>
+        </select>
+        <select id="btnchitietngay" style="margin:2%; width:10%;" class="btn btn-success">
+            <option>Ngày</option>
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option>5</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+            <option>10</option>
+            <option>11</option>
+            <option>12</option>
+            <option>13</option>
+            <option>14</option>
+            <option>15</option>
+            <option>16</option>
+            <option>17</option>
+            <option>18</option>
+            <option>19</option>
+            <option>20</option>
+            <option>21</option>
+            <option>22</option>
+            <option>23</option>
+            <option>24</option>
+            <option>25</option>
+            <option>26</option>
+            <option>27</option>
+            <option>28</option>
+            <option>29</option>
+            <option>30</option>
+            <option>31</option>
+        </select>
+        <input type="submit" id="btnchitiet" class="btn btn-success" value="Tìm" style="margin:2%; width:10%;" />
+    </div>
+    <table border="1" cellpadding="5" cellspacing="5" width="100%">
+        <tr style="text-align:center;">
+            <td>Ngày Lắp Đặt</td>
+            <td>Tài Khoản Mua </td>
+            <td>Số Lượng</td>
+            <td>Số Phần Trăm</td>
+            <td>Giá</td>
+            <td> Giá Thực Tế</td>
+            <td>Ngày Thêm Sản Phẩm</td>
+            <td>Số Lượng Còn Lại</td>
+            <td>Xem Sản Phẩm</td>
+        </tr>
+        @{
+            var chiTietNgay = db.f_DoanhThuTrongNgay(save.taikhoan, thang, nam, ngay).ToList();
+        }
+        @foreach (var key in chiTietNgay)
+        {
+            <tr style="text-align:center;">
+                <td>@key.ngayban</td>               
+                <td>@key.taikhoanmua</td>
+                <td>@key.soluongdaban</td>
+                <td>@key.sophantram</td>
+                <td>@key.gia</td>
+                @{
+                    var giathucte_ChitietNgay = ((key.gia * (100 - key.sophantram) / 100) * key.soluongdaban);
+                }
+                <td>@giathucte_ChitietNgay</td>
+                <td>@key.ngaythem</td>
+                <td>@key.soluonghientai</td>
+                <td><a href="@Url.Action("Index","chiTiet", new {id=key.idsanpham})">Xem</a></td>
+            </tr>
+        }
+    </table>
+</div>
+<hr />
